@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import {
@@ -17,6 +18,9 @@ import {
 import { A2AExpressApp } from '@a2a-js/sdk/server/express';
 import { agent } from './weatherAgent.js';
 
+const SERVER_HOST = process.env.SERVER_HOST || "0.0.0.0";
+const SERVER_PORT = process.env.SERVER_PORT || "4000";
+
 const capabilities: AgentCapabilities = {
   streaming: false,
 };
@@ -25,7 +29,7 @@ const weatherAgentCard: AgentCard = {
   description: "Agent Cuaca di wilayah indonesia bagian kaltim",
   protocolVersion: "0.3.0",
   version: "1.0.0",
-  url: "http://0.0.0.0:4000/",
+  url: `http://${SERVER_HOST}:${SERVER_PORT}/`,
   capabilities: capabilities,
   defaultInputModes: ["text", "text/plain"],
   defaultOutputModes: ["text", "text/plain"],
