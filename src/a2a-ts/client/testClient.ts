@@ -12,10 +12,10 @@ import {
 import { v4 as uuidv4 } from "uuid";
 
 const WEATHER_AGENT_URL = process.env.WEATHER_AGENT_URL;
-//const WEATHER_AGENT_URL_IP = process.env.WEATHER_AGENT_URL_IP;
+const WEATHER_AGENT_URL_IP = process.env.WEATHER_AGENT_URL_IP;
 let agentDiscovery: Record<string, AgentCard> = {};
 async function run() {
-  const client = await A2AClient.fromCardUrl(`${WEATHER_AGENT_URL}/${AGENT_CARD_PATH}`);
+  const client = await A2AClient.fromCardUrl(`${WEATHER_AGENT_URL_IP}/${AGENT_CARD_PATH}`);
   const card: AgentCard = await client.getAgentCard();
   const agentName: string = card.name;
   agentDiscovery[agentName] = card;
