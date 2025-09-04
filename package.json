@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "npx tsx src/index.ts",
     "a2a:weather-agent": "npx tsx src/a2a-ts/server/server.ts",
-    "a2a:test-client": "npx tsx src/a2a-ts/client/testClient.ts"
+    "a2a:test-client": "npx tsx src/a2a-ts/client/testClient.ts",
+    "mcp:weather": "npx tsx src/mcp-ts/serverWeather.ts",
+    "mcp:inspect": "npx @modelcontextprotocol/inspector"
   },
   "keywords": [],
   "author": "",
@@ -17,7 +19,9 @@
     "@langchain/core": "^0.3.72",
     "@langchain/google-genai": "^0.2.16",
     "@langchain/langgraph": "^0.4.8",
+    "@modelcontextprotocol/sdk": "^1.17.5",
     "@types/node": "^24.3.0",
+    "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "tsx": "^4.20.5",
