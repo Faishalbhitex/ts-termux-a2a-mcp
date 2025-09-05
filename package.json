@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "npx tsx src/index.ts",
-    "a2a:weather-agent": "npx tsx src/a2a-ts/server/server.ts",
+    "a2a:weather-agent": "npx tsx src/a2a-ts/server/weatherAgentServer.ts",
     "a2a:test-client": "npx tsx src/a2a-ts/client/testClient.ts",
     "mcp:weather": "npx tsx src/mcp-ts/serverWeather.ts",
     "mcp:inspect": "npx @modelcontextprotocol/inspector"
@@ -17,7 +17,6 @@
   "dependencies": {
     "@a2a-js/sdk": "^0.3.3",
     "@langchain/core": "^0.3.72",
-    "@langchain/google-genai": "^0.2.16",
     "@langchain/langgraph": "^0.4.8",
     "@langchain/mcp-adapters": "^0.6.0",
     "@modelcontextprotocol/sdk": "^1.17.5",
