@@ -66,8 +66,8 @@ async function run() {
 
   const response2 = await client.sendMessage(sendParams2);
 
-  if ("error" in response) {
-    console.error("Error:", response.error.message);
+  if ("error" in response2) {
+    console.error("Error:", response2.error.message);
   } else {
     const result2 = (response2 as SendMessageSuccessResponse).result as Message;
     const resultJson2 = JSON.stringify(result2.parts[0], null, 2);

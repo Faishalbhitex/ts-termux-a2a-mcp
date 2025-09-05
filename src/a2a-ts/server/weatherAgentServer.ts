@@ -35,7 +35,7 @@ const weatherAgentCard: AgentCard = {
     {
       id: "Weather Agent Id",
       name: "Weather Kaltim",
-      description: "Weather agent di daerah kalimantan timur (samarinda, balikpapan, bontang).",
+      description: "Weather agent di daerah kalimantan timur (samarinda, balikpapan, bontang, tenggarong dan sangatta).",
       tags: [
         "cuaca",
         "kaltim",
