@@ -18,7 +18,7 @@ import {
 import { A2AExpressApp } from '@a2a-js/sdk/server/express';
 import { agent } from './weatherAgent.js';
 
-const WEATHER_AGENT_URL: string = process.env.WEATHER_AGFENT_URL || "";
+const WEATHER_AGENT_URL: string = process.env.WEATHER_AGENT_URL || "";
 const capabilities: AgentCapabilities = {
   streaming: false,
 };
@@ -65,6 +65,7 @@ class WeatherAgentExecutor implements AgentExecutor {
       },
       config
     );
+    console.log(`\nWeather Agent LangGraph Log: ${JSON.stringify(weatherAgent, null, 2)}\n`);
     const weatherAgentResponse = weatherAgent.messages[weatherAgent.messages.length - 1];
     const respMsg: Message = {
       kind: "message",
