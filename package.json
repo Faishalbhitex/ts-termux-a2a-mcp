@@ -8,7 +8,8 @@
     "a2a:weather-agent": "npx tsx src/a2a-ts/server/weatherAgentServer.ts",
     "a2a:test-client": "npx tsx src/a2a-ts/client/testClient.ts",
     "mcp:weather": "npx tsx src/mcp-ts/serverWeather.ts",
-    "mcp:inspect": "npx @modelcontextprotocol/inspector"
+    "mcp:inspect": "npx @modelcontextprotocol/inspector",
+    "agent-register": "npx tsx src/agent-register/discoveryAgentServer.ts"
   },
   "keywords": [],
   "author": "",
@@ -22,6 +23,7 @@
     "@langchain/mcp-adapters": "^0.6.0",
     "@modelcontextprotocol/sdk": "^1.17.5",
     "@types/node": "^24.3.0",
+    "axios": "^1.12.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
@@ -30,6 +32,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@types/axios": "^0.9.36",
     "typescript": "^5.9.2"
   }
 }
