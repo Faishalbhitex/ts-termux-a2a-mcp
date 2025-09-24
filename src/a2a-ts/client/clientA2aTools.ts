@@ -21,6 +21,12 @@ export interface AgentInfo {
   create_at?: string;
 }
 
+export interface AgentHealth {
+  name: string;
+  url: string;
+  status: "online" | "offline";
+}
+
 export interface ResponseAgentServer {
   name: string;
   message: string;
@@ -28,6 +34,7 @@ export interface ResponseAgentServer {
   taskId: string;
   fromUrl: string;
 }
+
 
 export class ClientA2aTools {
   private registerUrl: string;
@@ -49,6 +56,55 @@ export class ClientA2aTools {
         success: false,
         error: err.message
       };
+    }
+  }
+
+  async checkHealthAgentServer(
+    params?: {
+      agentNames?: string[];
+      limits?: number;
+    }
+  ): Promise<{ success: boolean, health?: AgentHealth[], totalAgentServer?: number, error?: string }> {
+    const { agentNames, limits = 10 } = params || {};
+
+    const discovery = await this.discoveryAgents();
+    if (!discovery.success || !discovery.data) {
+      return {
+        success: false,
+        error: "Agent resgiser is empty"
+      };
+    }
+
+    let agents = discovery.data;
+    const totalAgentServer = agents.length;
+
+    if (agentNames && agentNames.length > 0) {
+      agents = agents.filter(a => agentNames.includes(a.name));
+    }
+
+    agents = agents.slice(0, limits);
+
+    const results: AgentHealth[] = [];
+    for (const agent of agents) {
+      try {
+        const client = await A2AClient.fromCardUrl(`${agent.url}/${AGENT_CARD_PATH}`);
+        results.push({
+          name: agent.name,
+          url: agent.url,
+          status: "online"
+        });
+      } catch {
+        results.push({
+          name: agent.name,
+          url: agent.url,
+          status: "offline"
+        });
+      }
+    }
+    return {
+      success: true,
+      health: results,
+      totalAgentServer: totalAgentServer
     }
   }
 
@@ -113,6 +169,7 @@ export class ClientA2aTools {
         error: err.message
       };
     }
-
   }
+
+
 }

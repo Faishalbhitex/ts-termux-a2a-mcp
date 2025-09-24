@@ -2,7 +2,6 @@ import "dotenv/config";
 import { ClientA2aTools } from "./clientA2aTools.js";
 
 const AGENT_REGISTER_URL = process.env.AGENT_REGISTER_URL || "";
-const WEATHER_AGENT_URL = process.env.WEATHER_AGENT_URL;
 const client = new ClientA2aTools(AGENT_REGISTER_URL);
 
 async function testClientA2aTools() {
@@ -15,7 +14,6 @@ async function testClientA2aTools() {
   }
   console.log("Agent available on register:", JSON.stringify(discovery, null, 2));
 
-  // 2. Send message to agent server base on their url in agent register
   const weatherAgent = discovery.data?.find(agent =>
     agent.skills.includes("cuaca") ||
     agent.skills.includes("kaltim")
@@ -32,6 +30,21 @@ async function testClientA2aTools() {
     "Hai, saya Faishal. Bagaimana cuaca samarinda?"
   );
 
+
+  // 2. Check agent server if online or offline 
+  const checkAgentsHealth = await client.checkHealthAgentServer();
+  console.log("Agent Status:", checkAgentsHealth);
+
+  const checkAgentsHealthByName = await client.checkHealthAgentServer(
+    {
+      agentNames: [weatherAgent.name, "Agent not available in register"],
+      limits: 5
+    }
+  );
+  console.log("Agent Status 2:", checkAgentsHealthByName);
+
+
+  // 3. Send message to agent server base on their url in agent register
   if (msg1.success) {
     console.log("Response 1:", msg1.resp?.message);
 
