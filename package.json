@@ -1,5 +1,5 @@
 {
-  "name": "termux-a2a",
+  "name": "termux-a2a-mcp",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -8,6 +8,7 @@
     "a2a:weather-agent": "npx tsx src/a2a-ts/server/weatherAgentServer.ts",
     "a2a:test-client": "npx tsx src/a2a-ts/client/testClient.ts",
     "a2a:client-tools": "npx tsx src/a2a-ts/client/testClientA2aTools.ts",
+    "a2a:client-agent-cli": "npx tsx src/a2a-ts/client/terminal.ts",
     "mcp:weather": "npx tsx src/mcp-ts/serverWeather.ts",
     "mcp:inspect": "npx @modelcontextprotocol/inspector",
     "agent-register": "npx tsx src/agent-register/discoveryAgentServer.ts"
