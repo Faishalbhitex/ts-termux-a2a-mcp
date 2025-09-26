@@ -27,7 +27,9 @@ async function testClientA2aTools() {
 
   const msg1 = await client.sendMessage(
     weatherAgent.url,
-    "Hai, saya Faishal. Bagaimana cuaca samarinda?"
+    "Hai, saya Faishal. Bagaimana cuaca samarinda?",
+    undefined,
+    undefined,
   );
 
 

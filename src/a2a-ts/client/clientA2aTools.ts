@@ -122,20 +122,27 @@ export class ClientA2aTools {
       const card: AgentCard = await client.getAgentCard();
       const agentName = card.name;
 
+      const payload: Message = {
+        messageId: uuidv4(),
+        role: "user",
+        parts: [
+          {
+            kind: "text",
+            text: message
+          }
+        ],
+        kind: "message"
+      };
+
+      if (taskId) {
+        payload.taskId = taskId;
+      }
+
+      if (contextId) {
+        payload.contextId = contextId;
+      }
       const sendParams: MessageSendParams = {
-        message: {
-          messageId: uuidv4(),
-          role: "user",
-          parts: [
-            {
-              kind: "text",
-              text: message
-            }
-          ],
-          kind: "message",
-          taskId: taskId,
-          contextId: contextId,
-        },
+        message: payload
       };
 
       const res = await client.sendMessage(sendParams);

@@ -41,6 +41,7 @@ async function run() {
     console.error("Error:", response.error.message);
   } else {
     const result = (response as SendMessageSuccessResponse).result as Message;
+    console.log("Full result-1:", JSON.stringify(result, null, 2));
     const resultJson = JSON.stringify(result.parts[0], null, 2);
     taskId = result.taskId;
     contextId = result.contextId;
@@ -70,6 +71,7 @@ async function run() {
     console.error("Error:", response2.error.message);
   } else {
     const result2 = (response2 as SendMessageSuccessResponse).result as Message;
+    console.log("Full result-2:", JSON.stringify(result2, null, 2));
     const resultJson2 = JSON.stringify(result2.parts[0], null, 2);
     taskId = result2.taskId;
     contextId = result2.contextId;
