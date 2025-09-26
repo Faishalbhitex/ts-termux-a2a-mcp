@@ -3,6 +3,9 @@ import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import {
   AgentCard,
+  Task,
+  TaskArtifactUpdateEvent,
+  TaskStatusUpdateEvent,
   Message,
   AgentCapabilities,
   Part,
@@ -52,6 +55,7 @@ class WeatherAgentExecutor implements AgentExecutor {
     eventBus: ExecutionEventBus
   ): Promise<void> {
     const userMsg = this.convertPartA2AtoLangGraph(requestContext.userMessage);
+    const taskId = requestContext.taskId || uuidv4();
     const contextId = requestContext.contextId || uuidv4();
     const config = { configurable: { thread_id: contextId } };
     const weatherAgent = await agent.invoke(
@@ -65,22 +69,48 @@ class WeatherAgentExecutor implements AgentExecutor {
       },
       config
     );
-    console.log(`\nWeather Agent LangGraph Log: ${JSON.stringify(weatherAgent, null, 2)}\n`);
+    console.log("Weather agent log:", JSON.stringify(weatherAgent, null, 2));
     const weatherAgentResponse = weatherAgent.messages[weatherAgent.messages.length - 1];
-    const respMsg: Message = {
-      kind: "message",
-      messageId: uuidv4(),
-      role: "agent",
-      parts: [
-        {
-          kind: "text",
-          text: weatherAgentResponse.content.toString()
-        }
-      ],
-      contextId: contextId,
-    }
 
-    eventBus.publish(respMsg);
+    const initialTask: Task = {
+      kind: "task",
+      id: taskId,
+      contextId: contextId,
+      status: {
+        state: "submitted",
+        timestamp: new Date().toISOString(),
+      },
+    };
+    eventBus.publish(initialTask);
+
+    const artifactUpdate: TaskArtifactUpdateEvent = {
+      kind: "artifact-update",
+      taskId: taskId,
+      contextId: contextId,
+      artifact: {
+        artifactId: uuidv4(),
+        name: "weather_report",
+        parts: [
+          {
+            kind: "text",
+            text: weatherAgentResponse.content.toString(),
+          }
+        ],
+      },
+    };
+    eventBus.publish(artifactUpdate);
+
+    const finalUpdate: TaskStatusUpdateEvent = {
+      kind: "status-update",
+      taskId: taskId,
+      contextId: contextId,
+      status: {
+        state: "input-required",
+        timestamp: new Date().toISOString()
+      },
+      final: true,
+    };
+    eventBus.publish(finalUpdate);
     eventBus.finished();
   }
 

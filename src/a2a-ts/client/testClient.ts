@@ -8,6 +8,7 @@ import {
   AGENT_CARD_PATH,
   MessageSendParams,
   SendMessageSuccessResponse,
+  Task,
 } from "@a2a-js/sdk";
 import { v4 as uuidv4 } from "uuid";
 
@@ -40,14 +41,30 @@ async function run() {
   if ("error" in response) {
     console.error("Error:", response.error.message);
   } else {
-    const result = (response as SendMessageSuccessResponse).result as Message;
+    const result = (response as SendMessageSuccessResponse).result;
     console.log("Full result-1:", JSON.stringify(result, null, 2));
-    const resultJson = JSON.stringify(result.parts[0], null, 2);
-    taskId = result.taskId;
-    contextId = result.contextId;
-    console.log(`\n${agentName} response-1: ${resultJson}\n`);
+
+    if (result.kind === "task") {
+      const task = result as Task;
+      taskId = task.id;
+      contextId = task.contextId;
+      console.log("\nTask found: ", JSON.stringify(task, null, 2));
+
+      if (task.artifacts && task.artifacts.length > 0) {
+        const artifactsName = task.artifacts[0].name;
+        const content = task.artifacts[0].parts[0];
+        console.log("\nArtifacts found:", JSON.stringify(task.artifacts, null, 2));
+        console.log("Artifact name:", artifactsName);
+        console.log("Content:", JSON.stringify(content, null, 2));
+      }
+    } else {
+      const message = result as Message;
+      taskId = result.taskId;
+      contextId = result.contextId;
+      console.log("\nTask and Artifacts not found");
+      console.log("Message:", JSON.stringify(message));
+    }
   }
-  console.log("Full response-1:", JSON.stringify(response, null, 2));
 
   const sendParams2: MessageSendParams = {
     message: {
@@ -56,29 +73,45 @@ async function run() {
       parts: [
         {
           kind: "text",
-          text: "Ingat nama saya sebutkan nama saya jika anda ingat? bagaimana cuaca di kaltim samarinda?"
+          text: "Ingat nama saya sebutkan nama saya jika anda ingat (wajib)? bagaimana cuaca di kaltim samarinda?"
         }
       ],
       kind: "message",
-      taskId: taskId,
       contextId: contextId,
+      taskId: taskId,
     },
   };
 
   const response2 = await client.sendMessage(sendParams2);
-
   if ("error" in response2) {
     console.error("Error:", response2.error.message);
   } else {
-    const result2 = (response2 as SendMessageSuccessResponse).result as Message;
+    const result2 = (response2 as SendMessageSuccessResponse).result;
     console.log("Full result-2:", JSON.stringify(result2, null, 2));
-    const resultJson2 = JSON.stringify(result2.parts[0], null, 2);
-    taskId = result2.taskId;
-    contextId = result2.contextId;
-    console.log(`\n${agentName} response-2: ${resultJson2}\n`);
-  }
-  console.log("Full response-2:", JSON.stringify(response2, null, 2));
 
+    if (result2.kind === "task") {
+      const task = result2 as Task;
+      taskId = task.id;
+      contextId = task.contextId;
+      console.log("\nTask found: ", JSON.stringify(task, null, 2));
+
+      if (task.artifacts && task.artifacts.length > 0) {
+        const artifactsName = task.artifacts[0].name;
+        const content = task.artifacts[0].parts[0];
+        console.log("\nArtifacts found:", JSON.stringify(task.artifacts, null, 2));
+        console.log("Artifact name:", artifactsName);
+        console.log("Content:", JSON.stringify(content, null, 2));
+      }
+    } else {
+      const message = result2 as Message;
+      taskId = result2.taskId;
+      contextId = result2.contextId;
+      console.log("\nTask and Artifacts not found");
+      console.log("Message:", JSON.stringify(message));
+    }
+  }
+  console.log("\n\nTask Id:", taskId);
+  console.log("\n\nContext Id:", contextId);
 }
 
 await run();

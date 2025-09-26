@@ -47,8 +47,9 @@ async function testClientA2aTools() {
 
 
   // 3. Send message to agent server base on their url in agent register
-  if (msg1.success) {
-    console.log("Response 1:", msg1.resp?.message);
+  if (msg1.success && msg1.resp?.isTask) {
+    const taskResponse = msg1.resp;
+    console.log("Response Task-1:", taskResponse);
 
     const msg2 = await client.sendMessage(
       weatherAgent.url,
@@ -56,8 +57,20 @@ async function testClientA2aTools() {
       msg1.resp?.taskId,
       msg1.resp?.contextId,
     );
+    const taskResponse2 = msg2.resp;
+    console.log("Response Task-2:", taskResponse2);
+  } else if (msg1.success && !msg1.resp.isTask) {
+    const messageResponse = msg1.resp;
+    console.log("Response Message-1:", messageResponse);
 
-    console.log("Response 2:", msg2.resp?.message);
+    const msg2 = await client.sendMessage(
+      weatherAgent.url,
+      "ingat nama saya? bagiaman cuaca di bontang di bandingkan kota sebelumnnya?",
+      msg1.resp?.taskId,
+      msg1.resp?.contextId,
+    );
+    const messageResponse2 = msg2.resp;
+    console.log("Response Message-2:", messageResponse2);
   }
 }
 

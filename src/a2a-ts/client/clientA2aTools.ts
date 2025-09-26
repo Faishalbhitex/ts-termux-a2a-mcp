@@ -8,6 +8,7 @@ import {
   AGENT_CARD_PATH,
   MessageSendParams,
   SendMessageSuccessResponse,
+  Task,
 } from "@a2a-js/sdk";
 import { v4 as uuidv4 } from "uuid";
 
@@ -27,7 +28,18 @@ export interface AgentHealth {
   status: "online" | "offline";
 }
 
-export interface ResponseAgentServer {
+export interface ResponseTaskAgentServer {
+  isTask: boolean;
+  name: string;
+  taskResult: string;
+  contextId: string;
+  taskId: string;
+  status: string;
+  fromUrl: string;
+}
+
+export interface ResponseMessageAgentServer {
+  isTask: boolean;
   name: string;
   message: string;
   contextId: string;
@@ -35,6 +47,7 @@ export interface ResponseAgentServer {
   fromUrl: string;
 }
 
+export type ResponseAgenServer = ResponseMessageAgentServer | ResponseTaskAgentServer;
 
 export class ClientA2aTools {
   private registerUrl: string;
@@ -113,11 +126,11 @@ export class ClientA2aTools {
     message: string,
     taskId?: string,
     contextId?: string,
-  ): Promise<{ success: boolean; resp?: ResponseAgentServer; error?: string }> {
+  ): Promise<{ success: boolean; resp?: ResponseAgenServer; error?: string }> {
     try {
-      let currentTaskId: string | undefined;
-      let currentContextId: string | undefined;
-      let responseMessage = "agent server not respon";
+      let responseAgentServer: ResponseAgenServer;
+      let taskResult = "Tasks not response";
+      let messageResult = "Message not responnse";
       const client = await A2AClient.fromCardUrl(`${agentCardUrl}/${AGENT_CARD_PATH}`);
       const card: AgentCard = await client.getAgentCard();
       const agentName = card.name;
@@ -152,18 +165,34 @@ export class ClientA2aTools {
           error: res.error.message
         };
       } else {
-        const result = (res as SendMessageSuccessResponse).result as Message;
-        responseMessage = JSON.stringify(result.parts[0], null, 2);
-        currentTaskId = result.taskId;
-        currentContextId = result.contextId;
-      }
+        const result = (res as SendMessageSuccessResponse).result;
+        if (result.kind === "task") {
+          const task = result as Task;
+          if (task.artifacts && task.artifacts.length > 0) {
+            taskResult = JSON.stringify(task.artifacts[0].parts[0], null, 2);
+          }
+          responseAgentServer = {
+            isTask: true,
+            name: agentName,
+            taskResult: taskResult,
+            taskId: task.id,
+            contextId: task.contextId,
+            status: task.status.state,
+            fromUrl: agentCardUrl,
+          }
+        } else {
+          const msg = result as Message;
+          messageResult = JSON.stringify(msg.parts[0], null, 2);
 
-      const responseAgentServer: ResponseAgentServer = {
-        name: agentName,
-        message: responseMessage,
-        taskId: currentTaskId,
-        contextId: currentContextId,
-        fromUrl: agentCardUrl
+          responseAgentServer = {
+            isTask: false,
+            name: agentName,
+            message: messageResult,
+            taskId: msg.taskId,
+            contextId: msg.contextId,
+            fromUrl: agentCardUrl,
+          }
+        }
       }
 
       return {

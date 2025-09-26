@@ -41,6 +41,9 @@ Thumbs.db
 logs/
 *.log
 
+# genkit
+.genkit/
+
 # Runtime data
 pids/
 *.pid
