@@ -1,3 +1,4 @@
+import { error } from "node:console";
 import { ClientA2aTools } from "./clientA2aTools.js";
 import { z, ai } from "./genkit.js";
 
@@ -9,21 +10,46 @@ export const discoveryAgents = ai.defineTool(
     description: 'Discovery available remote/server agents from register.',
   },
   async () => {
-    return await client.discoveryAgents();
+    try {
+      const res = await client.discoveryAgents();
+      if (!res.success) {
+        throw new Error(res.error || "Unknown error in discoveryAgents");
+      }
+      return res;
+    } catch (err: any) {
+      return {
+        success: false,
+        error: err.message ?? "Unexpected error in discoveryAgents"
+      };
+    }
   }
 );
 
 export const checkAgentHealth = ai.defineTool(
   {
     name: "checkAgentHealth",
-    description: "Check health status of registered agents  if agent is online or offline",
+    description: "Check health status of registered agents if agent is online or offline",
     inputSchema: z.object({
       agentNames: z.array(z.string()).optional().describe('Agent names available on register'),
       limits: z.number().optional().default(10).describe('Max agents to check on register'),
     })
   },
   async (input) => {
-    return client.checkHealthAgentServer({ agentNames: input.agentNames, limits: input.limits });
+    try {
+      const res = await client.checkHealthAgentServer({
+        agentNames: input.agentNames,
+        limits: input.limits
+      });
+      if (!res.success) {
+        throw new Error(res.error || "Unknown error in checkAgentHealth");
+      }
+      return res;
+    } catch (err: any) {
+      return {
+        success: false,
+        error: err.message ?? "Unexpected error in checkAgentHealth"
+      };
+    }
   }
 );
 
@@ -39,8 +65,22 @@ export const sendToAgent = ai.defineTool(
     })
   },
   async (input) => {
-    return await client.sendMessage(input.agentUrl, input.message, input.taskId, input.contextId);
+    try {
+      const res = await client.sendMessage(
+        input.agentUrl,
+        input.message,
+        input.taskId,
+        input.contextId
+      );
+      if (!res.success) {
+        throw new Error(res.error || "Unknown error in sendToAgent");
+      }
+      return res;
+    } catch (err: any) {
+      return {
+        success: false,
+        error: err.message ?? "Unexpected error in sendToAgent"
+      };
+    }
   }
-);
-
-
+); 
