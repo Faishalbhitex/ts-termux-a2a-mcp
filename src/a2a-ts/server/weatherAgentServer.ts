@@ -4,7 +4,6 @@ import { v4 as uuidv4 } from 'uuid';
 import {
   AgentCard,
   Task,
-  TaskArtifactUpdateEvent,
   TaskStatusUpdateEvent,
   Message,
   AgentCapabilities,
@@ -20,6 +19,7 @@ import {
 } from '@a2a-js/sdk/server';
 import { A2AExpressApp } from '@a2a-js/sdk/server/express';
 import { agent } from './weatherAgent.js';
+import { AIMessage, ToolMessage } from '@langchain/core/messages';
 
 const WEATHER_AGENT_URL: string = process.env.WEATHER_AGENT_URL || "";
 const capabilities: AgentCapabilities = {
@@ -50,71 +50,143 @@ const weatherAgentCard: AgentCard = {
 
 
 class WeatherAgentExecutor implements AgentExecutor {
+  private cancelledTasks = new Set<string>();
+
+  public cancelTask = async (
+    taskId: string,
+    _eventBus: ExecutionEventBus,
+  ): Promise<void> => {
+    this.cancelledTasks.add(taskId);
+  };
+
   async execute(
     requestContext: RequestContext,
     eventBus: ExecutionEventBus
   ): Promise<void> {
-    const userMsg = this.convertPartA2AtoLangGraph(requestContext.userMessage);
-    const taskId = requestContext.taskId || uuidv4();
-    const contextId = requestContext.contextId || uuidv4();
-    const config = { configurable: { thread_id: contextId } };
-    const weatherAgent = await agent.invoke(
-      {
-        messages: [
-          {
-            role: "user",
-            content: userMsg,
-          },
-        ],
-      },
-      config
+    const userMessage = requestContext.userMessage;
+    const existingTask = requestContext.task;
+
+    const taskId = existingTask?.id || uuidv4();
+    const contextId = userMessage.contextId || requestContext?.contextId || uuidv4();
+
+    console.log(
+      `[WeatherAgentExecutor] Processing message ${userMessage.messageId} for task ${taskId} (context: ${contextId})`
     );
-    console.log("Weather agent log:", JSON.stringify(weatherAgent, null, 2));
-    const weatherAgentResponse = weatherAgent.messages[weatherAgent.messages.length - 1];
 
-    const initialTask: Task = {
-      kind: "task",
-      id: taskId,
-      contextId: contextId,
-      status: {
-        state: "submitted",
-        timestamp: new Date().toISOString(),
-      },
-    };
-    eventBus.publish(initialTask);
+    if (!existingTask) {
+      const initialTask: Task = {
+        kind: "task",
+        id: taskId,
+        contextId: contextId,
+        status: {
+          state: "submitted",
+          timestamp: new Date().toISOString(),
+        },
+        history: [userMessage],
+        metadata: userMessage.metadata,
+      };
+      eventBus.publish(initialTask);
+    }
 
-    const artifactUpdate: TaskArtifactUpdateEvent = {
-      kind: "artifact-update",
-      taskId: taskId,
-      contextId: contextId,
-      artifact: {
-        artifactId: uuidv4(),
-        name: "weather_report",
-        parts: [
-          {
-            kind: "text",
-            text: weatherAgentResponse.content.toString(),
-          }
-        ],
-      },
-    };
-    eventBus.publish(artifactUpdate);
+    const inputs = { role: "user", content: this.convertPartA2AtoLangGraph(userMessage) };
+    const config = { thread_id: contextId };
+    let fullWeatherAgentRespose = "";
 
-    const finalUpdate: TaskStatusUpdateEvent = {
-      kind: "status-update",
-      taskId: taskId,
-      contextId: contextId,
-      status: {
-        state: "input-required",
-        timestamp: new Date().toISOString()
-      },
-      final: true,
-    };
-    eventBus.publish(finalUpdate);
-    eventBus.finished();
+    try {
+      for await (const chunk of agent.stream(
+        { messages: inputs },
+        {
+          configurable: config,
+          streamMode: "values",
+        },
+      )) {
+        const messages = chunk.messages || [];
+        const lastMessage = messages[messages.length - 1];
+
+        if (lastMessage instanceof ToolMessage) {
+          console.log("Tool Message.");
+          hashToolCalls = true;
+
+          const workingStatusUpdate: TaskStatusUpdateEvent = {
+            kind: "status-update",
+            taskId: taskId,
+            contextId: contextId,
+            status: {
+              state: "working",
+              message: {
+                kind: "message",
+                role: "agent",
+                messageId: uuidv4(),
+                parts: [{ kind: "text", text: "Mengambil data cauaca di kaltim..." }],
+                taskId: taskId,
+                contextId: contextId,
+              },
+              timestamp: new Date().toISOString(),
+            },
+            final: false,
+          };
+          eventBus.publish(workingStatusUpdate);
+        } else if (lastMessage instanceof AIMessage) {
+          fullWeatherAgentRespose = lastMessage.content || "";
+          console.log(
+            `[fullWeatherAgentRespose]: ${fullWeatherAgentRespose}`
+          );
+        }
+
+        const agentMessage: Message = {
+          kind: "message",
+          role: "agent",
+          messageId: uuidv4(),
+          parts: [{ kind: "text", text: fullWeatherAgentRespose || "Completed." }],
+          taskId: taskId,
+          contextId: contextId,
+        };
+        const finalUpdateStatus: TaskStatusUpdateEvent = {
+          kind: "status-update",
+          taskId: taskId,
+          contextId: contextId,
+          status: {
+            state: "completed",
+            message: agentMessage,
+            timestamp: new Date().toISOString(),
+          },
+          final: true,
+        };
+        eventBus.publish(finalUpdateStatus);
+
+        console.log(
+          `[WeatherAgentExecutor] Task ${taskId} finished with state: completed`
+        );
+      }
+    } catch (err: unknown) {
+      console.log(
+        `[WeatherAgentExecutor] Error processing task ${taskId}:`,
+        err
+      );
+
+      const errorMessage = err instanceof Error ? err.message : "Unknow error occurred";
+      const errorUpdateStatus: TaskStatusUpdateEvent = {
+        kind: "status-update",
+        taskId: taskId,
+        contextId: contextId,
+        status: {
+          state: "failed",
+          message: {
+            kind: "message",
+            role: "agent",
+            messageId: uuidv4(),
+            parts: [{ kind: "text", text: `Agent error: ${errorMessage}` }],
+            taskId: taskId,
+            contextId: contextId,
+          },
+          timestamp: new Date().toISOString(),
+        },
+        final: true,
+      };
+      eventBus.publish(errorUpdateStatus);
+    }
+
   }
-
-  cancelTask = async (): Promise<void> => { };
 
   private convertPartA2AtoLangGraph(message: Message): string {
     const part: Part = message.parts[0];
