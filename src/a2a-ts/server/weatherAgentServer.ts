@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import {
   AgentCard,
   Task,
+  TaskState,
   TaskStatusUpdateEvent,
   Message,
   AgentCapabilities,
@@ -23,7 +24,7 @@ import { AIMessage, ToolMessage } from '@langchain/core/messages';
 
 const WEATHER_AGENT_URL: string = process.env.WEATHER_AGENT_URL || "";
 const capabilities: AgentCapabilities = {
-  streaming: false,
+  streaming: true,
 };
 const weatherAgentCard: AgentCard = {
   name: "Weather Agent",
@@ -74,6 +75,7 @@ class WeatherAgentExecutor implements AgentExecutor {
     );
 
     if (!existingTask) {
+      // State submitted
       const initialTask: Task = {
         kind: "task",
         id: taskId,
@@ -88,26 +90,96 @@ class WeatherAgentExecutor implements AgentExecutor {
       eventBus.publish(initialTask);
     }
 
-    const inputs = { role: "user", content: this.convertPartA2AtoLangGraph(userMessage) };
-    const config = { thread_id: contextId };
-    let fullWeatherAgentRespose = "";
+    const inputs = { messages: [{ role: "user", content: this.convertPartA2AtoLangGraph(userMessage) }] };
+    const config = { configurable: { thread_id: contextId } };
+    let finalContent = "";
+    let weatherAgentStructuredOutput: any = null;
+    let finalState: TaskState = "completed";
+    const stream = await agent.stream(
+      inputs,
+      {
+        streamMode: "values",
+        ...config,
+      }
+    );
 
     try {
-      for await (const chunk of agent.stream(
-        { messages: inputs },
-        {
-          configurable: config,
-          streamMode: "values",
-        },
-      )) {
+      for await (const chunk of stream) {
+        // State canceled 
+        if (this.cancelledTasks.has(taskId)) {
+          console.log(
+            `[WeatherAgentExecutor] Request cancelled for task ${taskId}`,
+          );
+
+          const cancelledUpdate: TaskStatusUpdateEvent = {
+            kind: "status-update",
+            taskId: taskId,
+            contextId: contextId,
+            status: {
+              state: "canceled",
+              timestamp: new Date().toISOString(),
+            },
+            final: true,
+          };
+          eventBus.publish(cancelledUpdate);
+          return;
+        }
+
         const messages = chunk.messages || [];
+        // State failed
+        if (messages.length === 0) {
+          console.warn(
+            `[WeatherAgentExecutor] No valid text messages for task ${taskId}.`
+          );
+          const failureUpdate: TaskStatusUpdateEvent = {
+            kind: "status-update",
+            taskId: taskId,
+            contextId: contextId,
+            status: {
+              state: "failed",
+              message: {
+                kind: "message",
+                role: "agent",
+                messageId: uuidv4(),
+                parts: [{ kind: "text", text: "Tidak ada pesan untuk di proses." }],
+                taskId: taskId,
+                contextId: contextId,
+              },
+              timestamp: new Date().toISOString(),
+            },
+            final: true,
+          };
+          eventBus.publish(failureUpdate);
+          return;
+        }
         const lastMessage = messages[messages.length - 1];
-
-        if (lastMessage instanceof ToolMessage) {
-          console.log("Tool Message.");
-          hashToolCalls = true;
-
-          const workingStatusUpdate: TaskStatusUpdateEvent = {
+        if (lastMessage instanceof AIMessage
+          && lastMessage.tool_calls
+          && lastMessage.tool_calls.length > 0
+        ) {
+          // State working-1  
+          const workingStatusUpdate1: TaskStatusUpdateEvent = {
+            kind: "status-update",
+            taskId: taskId,
+            contextId: contextId,
+            status: {
+              state: "working",
+              message: {
+                kind: "message",
+                role: "agent",
+                messageId: uuidv4(),
+                parts: [{ kind: "text", text: "Mencari tool untuk check data cuaca di kaltim..." }],
+                taskId: taskId,
+                contextId: contextId,
+              },
+              timestamp: new Date().toISOString(),
+            },
+            final: false,
+          };
+          eventBus.publish(workingStatusUpdate1);
+        } else if (lastMessage instanceof ToolMessage) {
+          // State working-2 
+          const workingStatusUpdate2: TaskStatusUpdateEvent = {
             kind: "status-update",
             taskId: taskId,
             contextId: contextId,
@@ -125,19 +197,33 @@ class WeatherAgentExecutor implements AgentExecutor {
             },
             final: false,
           };
-          eventBus.publish(workingStatusUpdate);
-        } else if (lastMessage instanceof AIMessage) {
-          fullWeatherAgentRespose = lastMessage.content || "";
-          console.log(
-            `[fullWeatherAgentRespose]: ${fullWeatherAgentRespose}`
-          );
+          eventBus.publish(workingStatusUpdate2);
         }
 
+        // Catch final content ai message
+        if (lastMessage instanceof AIMessage && typeof lastMessage.content === "string") {
+          finalContent = lastMessage.content;
+        }
+        // Catch structured response
+        if (chunk.structuredResponse) {
+          weatherAgentStructuredOutput = chunk.structuredResponse;
+        }
+        if (weatherAgentStructuredOutput?.status === "butuh_informasi_tambahan") {
+          finalState = "input-required";
+        }
+        console.log(
+          `[WeatherAgentExecutor] Stream finished. Final state: ${finalState}`
+        );
+
+        const messageText = weatherAgentStructuredOutput?.content || finalState || "Proses selesai.";
+        console.log(
+          `[WeatherAgentExecutor] Response: ${messageText} for task ${taskId}`
+        );
         const agentMessage: Message = {
           kind: "message",
           role: "agent",
           messageId: uuidv4(),
-          parts: [{ kind: "text", text: fullWeatherAgentRespose || "Completed." }],
+          parts: [{ kind: "text", text: messageText }],
           taskId: taskId,
           contextId: contextId,
         };
@@ -146,7 +232,7 @@ class WeatherAgentExecutor implements AgentExecutor {
           taskId: taskId,
           contextId: contextId,
           status: {
-            state: "completed",
+            state: finalState,
             message: agentMessage,
             timestamp: new Date().toISOString(),
           },

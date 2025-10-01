@@ -78,7 +78,6 @@ async function run() {
       ],
       kind: "message",
       contextId: contextId,
-      taskId: taskId,
     },
   };
 
