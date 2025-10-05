@@ -5,6 +5,8 @@ const AGENT_REGISTER_URL = process.env.AGENT_REGISTER_URL || "";
 const client = new ClientA2aTools(AGENT_REGISTER_URL);
 
 async function testClientA2aTools() {
+  let contextId: string | undefined;
+  let taskId: string | undefined;
   // 1. Discovery agent server/remote on url agent register go 
   console.log("Discover agent..");
   const discovery = await client.discoveryAgents();
@@ -25,13 +27,14 @@ async function testClientA2aTools() {
   }
   console.log("Found weather agent:", weatherAgent.name);
 
-  const msg1 = await client.sendMessage(
+  const result = await client.sendMessage(
     weatherAgent.url,
     "Hai, saya Faishal. Bagaimana cuaca samarinda?",
     undefined,
     undefined,
   );
 
+  console.log(`Result: ${JSON.stringify(result, null, 2)}`);
 
   // 2. Check agent server if online or offline 
   const checkAgentsHealth = await client.checkHealthAgentServer();
@@ -45,33 +48,6 @@ async function testClientA2aTools() {
   );
   console.log("Agent Status 2:", checkAgentsHealthByName);
 
-
-  // 3. Send message to agent server base on their url in agent register
-  if (msg1.success && msg1.resp?.isTask) {
-    const taskResponse = msg1.resp;
-    console.log("Response Task-1:", taskResponse);
-
-    const msg2 = await client.sendMessage(
-      weatherAgent.url,
-      "Masih ingat nama saya? Dan bagaimana cuaca di balikpapan di bandingkan kota sebelumnnya yang saya katakan tadi?",
-      msg1.resp?.taskId,
-      msg1.resp?.contextId,
-    );
-    const taskResponse2 = msg2.resp;
-    console.log("Response Task-2:", taskResponse2);
-  } else if (msg1.success && !msg1.resp.isTask) {
-    const messageResponse = msg1.resp;
-    console.log("Response Message-1:", messageResponse);
-
-    const msg2 = await client.sendMessage(
-      weatherAgent.url,
-      "ingat nama saya? bagiaman cuaca di bontang di bandingkan kota sebelumnnya?",
-      msg1.resp?.taskId,
-      msg1.resp?.contextId,
-    );
-    const messageResponse2 = msg2.resp;
-    console.log("Response Message-2:", messageResponse2);
-  }
 }
 
 await testClientA2aTools();

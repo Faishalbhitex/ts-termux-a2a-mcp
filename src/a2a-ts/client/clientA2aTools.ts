@@ -9,6 +9,9 @@ import {
   MessageSendParams,
   SendMessageSuccessResponse,
   Task,
+  Artifact,
+  TaskStatusUpdateEvent,
+  TaskArtifactUpdateEvent,
 } from "@a2a-js/sdk";
 import { v4 as uuidv4 } from "uuid";
 
@@ -28,26 +31,12 @@ export interface AgentHealth {
   status: "online" | "offline";
 }
 
-export interface ResponseTaskAgentServer {
-  isTask: boolean;
-  name: string;
-  taskResult: string;
-  contextId: string;
-  taskId: string;
-  status: string;
-  fromUrl: string;
+export type TaskCycle = Task | TaskStatusUpdateEvent | TaskArtifactUpdateEvent;
+export interface SendMessageResult {
+  success: boolean;
+  result?: TaskCycle | Artifact | Message;
+  error?: string;
 }
-
-export interface ResponseMessageAgentServer {
-  isTask: boolean;
-  name: string;
-  message: string;
-  contextId: string;
-  taskId: string;
-  fromUrl: string;
-}
-
-export type ResponseAgenServer = ResponseMessageAgentServer | ResponseTaskAgentServer;
 
 export class ClientA2aTools {
   private registerUrl: string;
@@ -126,79 +115,96 @@ export class ClientA2aTools {
     message: string,
     taskId?: string,
     contextId?: string,
-  ): Promise<{ success: boolean; resp?: ResponseAgenServer; error?: string }> {
+  ): Promise<SendMessageResult> {
     try {
-      let responseAgentServer: ResponseAgenServer;
-      let taskResult = "Tasks not response";
-      let messageResult = "Message not responnse";
       const client = await A2AClient.fromCardUrl(`${agentCardUrl}/${AGENT_CARD_PATH}`);
       const card: AgentCard = await client.getAgentCard();
       const agentName = card.name;
+      const agentCapabilities = card.capabilities.streaming;
 
-      const payload: Message = {
+      const messageParams: Message = {
+        kind: "message",
         messageId: uuidv4(),
         role: "user",
-        parts: [
-          {
-            kind: "text",
-            text: message
-          }
-        ],
-        kind: "message"
+        parts: [{ kind: "text", text: message }],
       };
-
-      if (taskId) {
-        payload.taskId = taskId;
-      }
 
       if (contextId) {
-        payload.contextId = contextId;
+        messageParams.contextId = contextId;
       }
-      const sendParams: MessageSendParams = {
-        message: payload
+      if (taskId) {
+        messageParams.taskId = taskId;
+      }
+
+      const params: MessageSendParams = {
+        message: messageParams,
       };
 
-      const res = await client.sendMessage(sendParams);
-      if ("error" in res) {
-        return {
-          success: false,
-          error: res.error.message
-        };
-      } else {
-        const result = (res as SendMessageSuccessResponse).result;
-        if (result.kind === "task") {
-          const task = result as Task;
-          if (task.artifacts && task.artifacts.length > 0) {
-            taskResult = JSON.stringify(task.artifacts[0].parts[0], null, 2);
-          }
-          responseAgentServer = {
-            isTask: true,
-            name: agentName,
-            taskResult: taskResult,
-            taskId: task.id,
-            contextId: task.contextId,
-            status: task.status.state,
-            fromUrl: agentCardUrl,
-          }
+      if (!agentCapabilities) {
+        const response = await client.sendMessage(params);
+        if ("error" in response) {
+          return {
+            success: false,
+            error: response.error.message,
+          };
         } else {
-          const msg = result as Message;
-          messageResult = JSON.stringify(msg.parts[0], null, 2);
+          const result = (response as SendMessageSuccessResponse).result;
 
-          responseAgentServer = {
-            isTask: false,
-            name: agentName,
-            message: messageResult,
-            taskId: msg.taskId,
-            contextId: msg.contextId,
-            fromUrl: agentCardUrl,
+          if (result.kind === "task") {
+            const task = result as Task;
+            return {
+              success: true,
+              result: task,
+            }
+            if (task.artifacts && task.artifacts.length > 0) {
+              const artifacts = task.artifacts[0] as Artifact;
+              return {
+                success: true,
+                result: artifacts,
+              }
+            }
+          } else {
+            const message = result as Message;
+            return {
+              success: true,
+              result: message,
+            }
+          }
+        }
+      } else {
+        const stream = client.sendMessageStream(params);
+
+        for await (const event of stream) {
+          const kind = event.kind;
+
+          if (kind === "task") {
+            const task = event as Task;
+            return {
+              success: true,
+              result: task,
+            }
+          } else if (kind === "status-update") {
+            const taskStatusUpdate = event as TaskStatusUpdateEvent;
+            return {
+              success: true,
+              result: taskStatusUpdate,
+            }
+          } else if (kind === "artifact-update") {
+            const artifactsStatusUpdate = event as TaskArtifactUpdateEvent;
+            return {
+              success: true,
+              result: artifactsStatusUpdate,
+            }
+          } else {
+            const message = event as Message;
+            return {
+              success: true,
+              result: message,
+            }
           }
         }
       }
 
-      return {
-        success: true,
-        resp: responseAgentServer
-      };
     } catch (err) {
       return {
         success: false,

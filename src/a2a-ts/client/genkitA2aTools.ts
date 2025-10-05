@@ -1,4 +1,3 @@
-import { error } from "node:console";
 import { ClientA2aTools } from "./clientA2aTools.js";
 import { z, ai } from "./genkit.js";
 
