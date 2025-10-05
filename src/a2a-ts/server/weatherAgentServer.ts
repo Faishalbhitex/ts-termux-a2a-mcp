@@ -71,7 +71,7 @@ class WeatherAgentExecutor implements AgentExecutor {
     const contextId = userMessage.contextId || requestContext?.contextId || uuidv4();
 
     console.log(
-      `[WeatherAgentExecutor] Processing message ${userMessage.messageId} for task ${taskId} (context: ${contextId})`
+      `\n[WeatherAgentExecutor] Processing message ${userMessage.messageId} for task ${taskId} (context: ${contextId})`
     );
 
     if (!existingTask) {
@@ -157,6 +157,9 @@ class WeatherAgentExecutor implements AgentExecutor {
           && lastMessage.tool_calls
           && lastMessage.tool_calls.length > 0
         ) {
+          console.log(
+            `[WeatherAgentExecutor] Reasoning before take action for task: ${taskId}`
+          );
           // State working-1  
           const workingStatusUpdate1: TaskStatusUpdateEvent = {
             kind: "status-update",
@@ -178,6 +181,9 @@ class WeatherAgentExecutor implements AgentExecutor {
           };
           eventBus.publish(workingStatusUpdate1);
         } else if (lastMessage instanceof ToolMessage) {
+          console.log(
+            `[WeatherAgentExecutor] Execution task for taskId: ${taskId}`
+          )
           // State working-2 
           const workingStatusUpdate2: TaskStatusUpdateEvent = {
             kind: "status-update",
@@ -208,45 +214,46 @@ class WeatherAgentExecutor implements AgentExecutor {
         if (chunk.structuredResponse) {
           weatherAgentStructuredOutput = chunk.structuredResponse;
         }
-        if (weatherAgentStructuredOutput?.status === "butuh_informasi_tambahan") {
-          finalState = "input-required";
-        }
-        console.log(
-          `[WeatherAgentExecutor] Stream finished. Final state: ${finalState}`
-        );
+      } // End loop block scope 
 
-        const messageText = weatherAgentStructuredOutput?.content || finalState || "Proses selesai.";
-        console.log(
-          `[WeatherAgentExecutor] Response: ${messageText} for task ${taskId}`
-        );
-        const agentMessage: Message = {
-          kind: "message",
-          role: "agent",
-          messageId: uuidv4(),
-          parts: [{ kind: "text", text: messageText }],
-          taskId: taskId,
-          contextId: contextId,
-        };
-        const finalUpdateStatus: TaskStatusUpdateEvent = {
-          kind: "status-update",
-          taskId: taskId,
-          contextId: contextId,
-          status: {
-            state: finalState,
-            message: agentMessage,
-            timestamp: new Date().toISOString(),
-          },
-          final: true,
-        };
-        eventBus.publish(finalUpdateStatus);
-
-        console.log(
-          `[WeatherAgentExecutor] Task ${taskId} finished with state: completed`
-        );
+      // Catch final state completed or input-required 
+      if (weatherAgentStructuredOutput?.status === "butuh_informasi_tambahan") {
+        finalState = "input-required";
       }
+      console.log(
+        `[WeatherAgentExecutor] Structured output: ${JSON.stringify(weatherAgentStructuredOutput, null, 2)}`
+      );
+      const messageText = weatherAgentStructuredOutput?.content || finalContent || "Proses selesai.";
+      console.log(
+        `[WeatherAgentExecutor] Response: ${messageText} for task ${taskId}`
+      );
+      const agentMessage: Message = {
+        kind: "message",
+        role: "agent",
+        messageId: uuidv4(),
+        parts: [{ kind: "text", text: messageText }],
+        taskId: taskId,
+        contextId: contextId,
+      };
+      const finalUpdateStatus: TaskStatusUpdateEvent = {
+        kind: "status-update",
+        taskId: taskId,
+        contextId: contextId,
+        status: {
+          state: finalState,
+          message: agentMessage,
+          timestamp: new Date().toISOString(),
+        },
+        final: true,
+      };
+      eventBus.publish(finalUpdateStatus);
+
+      console.log(
+        `[WeatherAgentExecutor] Task ${taskId} finished with state: ${finalState}\n`
+      );
     } catch (err: unknown) {
       console.log(
-        `[WeatherAgentExecutor] Error processing task ${taskId}:`,
+        `[WeatherAgentExecutor] Error processing task ${taskId}\n`,
         err
       );
 

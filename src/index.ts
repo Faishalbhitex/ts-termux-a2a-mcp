@@ -75,21 +75,7 @@ Content: ${resp.structuredResponse.content}\n
 `
 );
 
-/*
-const resp2 = await agent.invoke(
-  {
-    messages: [
-      {
-        role: "user",
-        content: "siapa tadi nama saya?",
-      },
-    ],
-  },
-  config);
-console.log("\nAgent Invoke2:", resp2);
-*/
-
-const resp3Stream = await agent.stream(
+const resp2Stream = await agent.stream(
   {
     messages: [
       {
@@ -104,12 +90,11 @@ const resp3Stream = await agent.stream(
 console.log("\nAgent response-2 (stream):");
 let fullResponse = "";
 let structuredResponse2 = {};
-for await (const chunk of resp3Stream) {
+for await (const chunk of resp2Stream) {
   console.log(chunk);
   console.log("\n");
-  const lastMessage = chunk.messages[chunk.messages.length - 1] || [];
+  const lastMessage: any = chunk.messages[chunk.messages.length - 1] || [];
   structuredResponse2 = chunk.structuredResponse;
-
   if (lastMessage instanceof AIMessage) {
     fullResponse = lastMessage.content || "";
   }
@@ -125,6 +110,24 @@ Content: ${structuredResponse2.content}\n
 `
 );
 console.log(
-  `Full response-2 (stream): ${fullResponse}`
+  `Full response-2 (stream): ${fullResponse}\n`
 );
 
+
+const resp3EventStrem = agent.streamEvents(
+  { messages: [{ role: "user", content: "bagaiman dengan bontang di bandingkan kota sebelumnnya?" }] },
+  {
+    version: "v2",
+    ...config
+  }
+);
+
+for await (const event of resp3EventStrem) {
+  const kind = event.event;
+  const name = event.name;
+  const data = JSON.stringify(event.data, null, 2);
+  console.log(
+    `
+\n${kind}: ${name}`
+  );
+}
