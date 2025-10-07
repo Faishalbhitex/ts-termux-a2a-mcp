@@ -31,10 +31,15 @@ export interface AgentHealth {
   status: "online" | "offline";
 }
 
-export type TaskCycle = Task | TaskStatusUpdateEvent | TaskArtifactUpdateEvent;
+export type EventKind =
+  | Task
+  | TaskStatusUpdateEvent
+  | TaskArtifactUpdateEvent
+  | Artifact
+  | Message;
 export interface SendMessageResult {
   success: boolean;
-  result?: TaskCycle | Artifact | Message;
+  result?: EventKind[];
   error?: string;
 }
 
@@ -150,61 +155,24 @@ export class ClientA2aTools {
         } else {
           const result = (response as SendMessageSuccessResponse).result;
 
-          if (result.kind === "task") {
-            const task = result as Task;
-            return {
-              success: true,
-              result: task,
-            }
-            if (task.artifacts && task.artifacts.length > 0) {
-              const artifacts = task.artifacts[0] as Artifact;
-              return {
-                success: true,
-                result: artifacts,
-              }
-            }
-          } else {
-            const message = result as Message;
-            return {
-              success: true,
-              result: message,
-            }
-          }
+          return {
+            success: true,
+            result: [result],
+          };
         }
       } else {
         const stream = client.sendMessageStream(params);
+        const events: (Task | TaskArtifactUpdateEvent | TaskStatusUpdateEvent | Message)[] = [];
 
         for await (const event of stream) {
-          const kind = event.kind;
+          events.push(event);
+        }
 
-          if (kind === "task") {
-            const task = event as Task;
-            return {
-              success: true,
-              result: task,
-            }
-          } else if (kind === "status-update") {
-            const taskStatusUpdate = event as TaskStatusUpdateEvent;
-            return {
-              success: true,
-              result: taskStatusUpdate,
-            }
-          } else if (kind === "artifact-update") {
-            const artifactsStatusUpdate = event as TaskArtifactUpdateEvent;
-            return {
-              success: true,
-              result: artifactsStatusUpdate,
-            }
-          } else {
-            const message = event as Message;
-            return {
-              success: true,
-              result: message,
-            }
-          }
+        return {
+          success: true,
+          result: events
         }
       }
-
     } catch (err) {
       return {
         success: false,
