@@ -1,12 +1,14 @@
 {
-  "name": "termux-a2a",
+  "name": "termux-a2a-mcp",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "npx tsx src/index.ts",
-    "a2a:weather-agent": "npx tsx src/a2a-ts/server/weatherAgentServer.ts",
-    "a2a:test-client": "npx tsx src/a2a-ts/client/testClient.ts",
+    "dev:weather-agent": "npx tsx src/a2a-ts/server/weather-agent/server.ts",
+    "a2a:weather-agent": "npx tsx src/a2a-ts/server/weather-agent/weatherAgentServer.ts",
+    "a2a:client-test": "npx tsx src/a2a-ts/client/testClient.ts",
+    "a2a:client-tools": "npx tsx src/a2a-ts/client/testClientA2aTools.ts",
+    "a2a:client-agent-cli": "npx tsx src/a2a-ts/client/terminal.ts",
     "mcp:weather": "npx tsx src/mcp-ts/serverWeather.ts",
     "mcp:inspect": "npx @modelcontextprotocol/inspector"
   },
@@ -16,20 +18,24 @@
   "type": "module",
   "dependencies": {
     "@a2a-js/sdk": "^0.3.3",
+    "@genkit-ai/google-genai": "^1.19.3",
     "@langchain/core": "^0.3.72",
     "@langchain/google-genai": "^0.2.17",
     "@langchain/langgraph": "^0.4.8",
     "@langchain/mcp-adapters": "^0.6.0",
     "@modelcontextprotocol/sdk": "^1.17.5",
     "@types/node": "^24.3.0",
+    "axios": "^1.12.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
+    "genkit": "^1.19.3",
     "langchain": "^0.3.32",
     "tsx": "^4.20.5",
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@types/axios": "^0.9.36",
     "typescript": "^5.9.2"
   }
 }
