@@ -71,8 +71,8 @@ Implementasi eksperimental **Agent-to-Agent (A2A) Protocol** dengan **Model Cont
 ### 1. Clone Repository Utama
 
 ```bash
-git clone https://github.com/Faishalbhitex/ts-termux-a2a-mcp.git
-cd ts-termux-a2a-mcp
+git clone https://github.com/Faishalbhitex/ts-mcp-a2a.git
+cd ts-mcp-a2a
 ```
 
 ### 2. Install Dependencies
@@ -242,7 +242,7 @@ Test low-level A2A protocol tanpa orchestrator.
 ## 📁 Struktur Project
 
 ```
-ts-termux-a2a-mcp/
+ts-mcp-a2a/
 ├── src/
 │   ├── a2a-ts/
 │   │   ├── client/
